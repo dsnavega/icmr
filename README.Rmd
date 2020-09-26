@@ -11,12 +11,12 @@ Regression based on Ridge Regression. The *telos* of this package is to create a
 where the degree of uncertainty of the prediction is as important as the 
 prediction itself (point estimate). Consult the list references for more details on conformal prediction.
 
-### Install:
+## Install:
 ```
 devtools::install_github(repo = "dsnavega/icmr")
 ```
 
-### Usage
+## Usage
 ```r
 # Build a 'icmr' object
 icmr.object <- icmr(x = x, y = y, control = icmr.control())
@@ -28,7 +28,7 @@ In the **Usage** example ``x` is assumed to be a matrix of numeric values and `y
 as an argument to the `icmr.control()` function. In that case the user should
 apply is own pipeline for pre-process the data and impute missing values.
 
-### References that inspired this implementation:
+## References that inspired this implementation:
 1. Balasubramanian VN, Ho S-S, Vovk V (2016) Conformal Prediction for Reliable Machine Learning
 2. Papadopoulos H (2012) Inductive Conformal Prediction: Theory and Application to Neural Networks. Tools Artif Intell. https://doi.org/10.5772/6078
 3. Papadopoulos H (2015) Cross-Conformal prediction with ridge regression. In: Lecture Notes in Computer Science (including subseries Lecture Notes in Artificial Intelligence and Lecture Notes in Bioinformatics). Springer Verlag, pp 260–270

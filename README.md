@@ -10,11 +10,13 @@ of the prediction is as important as the prediction itself (point
 estimate). Consult the list references for more details on conformal
 prediction.
 
-### Install:
+Install:
+--------
 
     devtools::install_github(repo = "dsnavega/icmr")
 
-### Usage
+Usage
+-----
 
 ``` r
 # Build a 'icmr' object
@@ -32,7 +34,8 @@ overridden by providing `process = F` as an argument to the
 `icmr.control()` function. In that case the user should apply is own
 pipeline for pre-process the data and impute missing values.
 
-### References that inspired this implementation:
+References that inspired this implementation:
+---------------------------------------------
 
 1.  Balasubramanian VN, Ho S-S, Vovk V (2016) Conformal Prediction for
     Reliable Machine Learning
