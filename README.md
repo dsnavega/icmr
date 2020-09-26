@@ -1,4 +1,3 @@
-<style> p {text-align: justify} </style>
 # icmr: Inductive Confidence Machine for Regression
 
 This packages provides an implementation of an Inductive Confidence Machine for
