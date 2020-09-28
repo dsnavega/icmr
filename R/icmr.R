@@ -134,11 +134,23 @@ icmr <- function(x, y, control = icmr.control()) {
 #'
 is.icmr <- function(x) inherits(x = x, what = "icmr")
 
+#' Predic method for Inductive Confidence Machine for Regression
 #' @author David Senhora Navega
 #' @export
-#' @noRd
 #'
-predict.icmr <- function(object, newdata, alpha = NULL, interval = T, ...) {
+#' @param object an icmr object
+#' @param newdata a numeric vector or matrix with the same variables used to
+#' create the icmr object
+#' @param alpha level of error tolerance or confidence for predictive intervals
+#' computed when conformal = T. Note confidence = 1 - alpha, with alpha assuming
+#' a value between 0.01 and 0.5. Default value is obtained from the icmr object.
+#' @param conformal a logical stating if confidence interval should be computed
+#' using conformal prediction framework. See Details.
+#' @param ... ...
+#'
+#' @details
+#' ...
+predict.icmr <- function(object, newdata, alpha = NULL, conformal = T, ...) {
 
   # Exception Handling
   if (!is.icmr(x = object))
@@ -153,12 +165,12 @@ predict.icmr <- function(object, newdata, alpha = NULL, interval = T, ...) {
   if (alpha < 0.01  | alpha > 0.5)
     stop("\n(-) alpha must be a numeric value between 0.01 and 0.5.")
 
-  if (!is.logical(interval))
+  if (!is.logical(conformal))
     stop("\n(-) 'interval' argument must be a logical.")
 
   if (missing(newdata)) {
 
-    if (interval) {
+    if (conformal) {
       prediction <- compute(object = object$conformal, alpha = alpha)
       return(prediction)
     } else {
@@ -176,7 +188,7 @@ predict.icmr <- function(object, newdata, alpha = NULL, interval = T, ...) {
     if (!is.null(object$processing))
       x <- compute(object = object$processing, x = newdata)
 
-    if (interval) {
+    if (conformal) {
       prediction <- compute(object = object$conformal, x = x, alpha = alpha)
       return(prediction)
     } else {

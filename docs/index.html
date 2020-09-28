@@ -70,14 +70,14 @@
 <div class="page-header"><h1 class="hasAnchor">
 <a href="#icmr-inductive-confidence-machine-for-regression" class="anchor"></a>icmr: Inductive Confidence Machine for Regression</h1></div>
 <p>This packages provides an implementation of an Inductive Confidence Machine for Regression based on Ridge Regression. The <em>telos</em> of this package is to create a regression model that provides point estimates and reliable predictive/confidence intervals with minimal assumptions, which is particularly useful in domains. where the degree of uncertainty of the prediction is as important as the prediction itself (point estimate). Consult the list references for more details on conformal prediction.</p>
-<div id="install" class="section level3">
-<h3 class="hasAnchor">
-<a href="#install" class="anchor"></a>Install:</h3>
+<div id="install" class="section level2">
+<h2 class="hasAnchor">
+<a href="#install" class="anchor"></a>Install:</h2>
 <div class="sourceCode" id="cb1"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a>devtools<span class="op">::</span><span class="kw">install_github</span>(<span class="dt">repo =</span> <span class="st">"dsnavega/icmr"</span>)</span></code></pre></div>
 </div>
-<div id="usage" class="section level3">
-<h3 class="hasAnchor">
-<a href="#usage" class="anchor"></a>Usage</h3>
+<div id="usage" class="section level2">
+<h2 class="hasAnchor">
+<a href="#usage" class="anchor"></a>Usage</h2>
 <div class="sourceCode" id="cb2"><pre class="r"><span class="co"># Build a 'icmr' object</span>
 <span class="no">icmr.object</span> <span class="kw">&lt;-</span> <span class="fu"><a href="reference/icmr.html">icmr</a></span>(<span class="kw">x</span> <span class="kw">=</span> <span class="no">x</span>, <span class="kw">y</span> <span class="kw">=</span> <span class="no">y</span>, <span class="kw">control</span> <span class="kw">=</span> <span class="fu"><a href="reference/icmr.control.html">icmr.control</a></span>())
 
@@ -85,9 +85,9 @@
 <span class="no">prediction</span> <span class="kw">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/predict.html">predict</a></span>(<span class="kw">object</span> <span class="kw">=</span> <span class="no">icmr.object</span>, <span class="kw">newdata</span> <span class="kw">=</span> <span class="no">z</span>, <span class="kw">alpha</span> <span class="kw">=</span> <span class="fl">0.05</span>)</pre></div>
 <p>In the <strong>Usage</strong> example `<code>x</code> is assumed to be a matrix of numeric values and <code>y</code> a vector of numeric data. If <code>NA</code> values are present in <code>x</code> by default the algorithm will process the data with standardization and perform a fast mean imputation of missing values. This can be overridden by providing <code>process = F</code> as an argument to the <code><a href="reference/icmr.control.html">icmr.control()</a></code> function. In that case the user should apply is own pipeline for pre-process the data and impute missing values.</p>
 </div>
-<div id="references-that-inspired-this-implementation" class="section level3">
-<h3 class="hasAnchor">
-<a href="#references-that-inspired-this-implementation" class="anchor"></a>References that inspired this implementation:</h3>
+<div id="references-that-inspired-this-implementation" class="section level2">
+<h2 class="hasAnchor">
+<a href="#references-that-inspired-this-implementation" class="anchor"></a>References that inspired this implementation:</h2>
 <ol>
 <li>Balasubramanian VN, Ho S-S, Vovk V (2016) Conformal Prediction for Reliable Machine Learning</li>
 <li>Papadopoulos H (2012) Inductive Conformal Prediction: Theory and Application to Neural Networks. Tools Artif Intell. <a href="https://doi.org/10.5772/6078" class="uri">https://doi.org/10.5772/6078</a>

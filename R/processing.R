@@ -58,11 +58,6 @@ compute.processing.layer <- function(object, x, task = "scale") {
   if(!is.processing.layer(object))
     stop("\n(-) object is not a 'processing.layer'.")
 
-  components <- names(object)
-  for (name in components) {
-    assign(name, object[[name]])
-  }
-
   # if (all.equal(colnames(x), input.names) != TRUE)
   #   stop("\n(-) Input names do not match processing layer parameterization.")
 
@@ -70,13 +65,13 @@ compute.processing.layer <- function(object, x, task = "scale") {
 
     scale = {
       compute_scaling(
-        object = scaling, x = data.matrix(rbind(x))
+        object = object$scaling, x = data.matrix(rbind(x))
       )
     },
 
     rescale = {
       compute_rescaling(
-        object = scaling, x = data.matrix(rbind(x))
+        object = object$scaling, x = data.matrix(rbind(x))
       )
     }
 

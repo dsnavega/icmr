@@ -227,15 +227,14 @@ ridge <- function(A, b, center = list(A = NULL, b = NULL), W = NULL) {
       return(beta)
     }
 
-    optimise_press <- function(x, U, S, V, b) {
+    optimise_press_rgt <- function(x, U, S, V, b) {
       mean(compute_estimate(C = x, U = U, S = S, V = V, b = b)$nmse)
     }
-
 
     # Get Optimal Lambda and Model Information
     prange <- pmax(range(c(S, .Machine$double.eps), .Machine$double.eps))
     optimum <- optimise(
-      f = optimise_press, interval = prange,
+      f = optimise_press_rgt, interval = prange,
       U = U, S = S, V = V, b = b
     )
 
@@ -351,14 +350,14 @@ ridge <- function(A, b, center = list(A = NULL, b = NULL), W = NULL) {
 
     }
 
-    optimise_press <- function(C, U, S, V, b) {
+    optimise_press_cgt <- function(C, U, S, V, b) {
       mean(compute_estimate(C = C, U = U, S = S, V = V, b = b)$nmse)
     }
 
     # Get Optimal Lambda and Model Information
     prange <- pmax(range(c(S, .Machine$double.eps), .Machine$double.eps))
     optimum <- stats::optimise(
-      f = optimise_press, interval = prange,
+      f = optimise_press_cgt, interval = prange,
       U = U, S = S, V = V, b = b
     )
 

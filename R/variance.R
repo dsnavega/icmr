@@ -74,11 +74,6 @@ compute.variance.layer <- function(object, x) {
 
   .truncate <- function(x, interval) pmax(pmin(x, interval[2]), interval[1])
 
-  components <- names(object)
-  for (name in components) {
-    assign(name, object[[name]])
-  }
-
   if (missing(x)) {
 
     variance <- object$regressor$predicted
@@ -86,9 +81,12 @@ compute.variance.layer <- function(object, x) {
 
   } else {
 
-    variance <- as.numeric(predict(object = regressor, newdata = x) * scaling)
-    if (truncate)
-      variance <- .truncate(variance, interval)
+    variance <- predict(object = object$regressor, newdata = x)
+    variance <- as.numeric(variance * object$scaling)
+
+    if (object$truncate)
+      variance <- .truncate(variance, object$interval)
+
     return(variance)
 
   }

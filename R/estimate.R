@@ -32,33 +32,29 @@ is.estimate.layer <- function(x) inherits(x = x, what = "estimate.layer")
 #'
 initialise.estimate.layer <- function(object, x, y, control) {
 
+  .truncate <- function(x, interval) pmax(pmin(x, interval[2]), interval[1])
+
   if(!is.estimate.layer(object))
     stop("\n(-) object is not an 'estimate.layer'.")
 
-  control.names <- c("interval", "truncate")
-  for(name in control.names) {
-    assign(name, control[[name]])
-  }
-
-  if (is.null(interval) & ncol(y) == 1) {
+  if (is.null(control$interval) & ncol(y) == 1) {
     n <- sum(!is.na(y))
     bw <- sd(x = y, na.rm = T)  * n ^ -0.25
-    interval <- range(x = y, na.rm = T) + c(-bw, bw) * 0.2
+    control$interval <- range(x = y, na.rm = T) + c(-bw, bw) * 0.5
   }
 
   # Compute Ridge Regression
   regressor <- ridge(A = x, b = y)
 
-  if (truncate & ncol(y) == 1) {
-    .truncate <- function(x, interval) pmax(pmin(x, interval[2]), interval[1])
-    regressor$predicted <- .truncate(regressor$predicted, interval)
+  if (control$truncate & ncol(y) == 1) {
+    regressor$predicted <- .truncate(regressor$predicted, control$interval)
   }
 
   layer <- structure(
     .Data = list(
       regressor = regressor,
-      truncate = truncate,
-      interval = interval
+      truncate = control$truncate,
+      interval = control$interval
     ),
     class = class(object)
   )
@@ -72,24 +68,19 @@ initialise.estimate.layer <- function(object, x, y, control) {
 #'
 compute.estimate.layer <- function(object, x) {
 
+  .truncate <- function(x, interval) pmax(pmin(x, interval[2]), interval[1])
+
   if(!is.estimate.layer(object))
     stop("\n(-) object is not an 'estimate.layer'.")
 
-  .truncate <- function(x, interval) pmax(pmin(x, interval[2]), interval[1])
-
-  components <- names(object)
-  for (name in components) {
-    assign(name, object[[name]])
-  }
-
   if (missing(x))
-    return(regressor$predicted)
+    return(object$regressor$predicted)
 
   newdata <- x
-  predicted <- predict(object = regressor, newdata = newdata)
+  predicted <- predict(object = object$regressor, newdata = newdata)
 
-  if (truncate)
-    predicted <- .truncate(predicted, interval)
+  if (object$truncate)
+    predicted <- .truncate(predicted, object$interval)
 
   return(predicted)
 
