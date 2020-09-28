@@ -13,6 +13,7 @@ prediction.
 Install:
 --------
 
+    # install.packages("devtools")
     devtools::install_github(repo = "dsnavega/icmr")
 
 Usage
@@ -34,8 +35,8 @@ overridden by providing `process = F` as an argument to the
 `icmr.control()` function. In that case the user should apply is own
 pipeline for pre-process the data and impute missing values.
 
-References that inspired this implementation:
----------------------------------------------
+References
+----------
 
 1.  Balasubramanian VN, Ho S-S, Vovk V (2016) Conformal Prediction for
     Reliable Machine Learning
