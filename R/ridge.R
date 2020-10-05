@@ -429,10 +429,10 @@ ridge <- function(A, b, center = list(A = NULL, b = NULL), W = NULL) {
 #'
 predict.ridge <- function(object, newdata, ...) {
 
-  if(!is.ridge(object))
+  if (!is.ridge(object))
     stop("\n(-) object is no a ridge model.")
 
-  if(missing(newdata)) {
+  if (missing(newdata)) {
     predicted <- object$predicted
     return(predicted)
   }
@@ -442,7 +442,7 @@ predict.ridge <- function(object, newdata, ...) {
   beta <- object$x
 
   newdata <- rbind(newdata)
-  if(ncol(newdata) != nrow(beta))
+  if (ncol(newdata) != nrow(beta))
     stop("\n(-) Predictors in newdata do not match learned coefficients.")
 
   newdata <- sweep(newdata, 2, center_A, "-")

@@ -43,7 +43,7 @@ icmr <- function(x, y, control = icmr.control()) {
   start.clock <- Sys.time()
 
   # Exception Handling
-  if(!is.matrix(x))
+  if (!is.matrix(x))
     stop("\n(-) x must be a numeric matrix.")
 
   if (any(is.na(y)))
@@ -59,7 +59,7 @@ icmr <- function(x, y, control = icmr.control()) {
     stop("\n(-) control is not an object created by 'icmr.control().'")
 
   # Coerce to Matrix Form
-  x <- cbind(x)
+  x <- rbind(x)
   y <- cbind(y)
 
   # Processing Layer
@@ -72,18 +72,20 @@ icmr <- function(x, y, control = icmr.control()) {
       object = create.layer(type = "processing"),
       x = x
     )
+
     x <- compute(object = processing.layer, x = x)
 
   } else {
 
     processing.layer <- NULL
 
-    if (any(is.na(x)))
-      message <- c(
+    if (any(is.na(x))) {
+      sms <- c(
         "\n(-) NA values detected (x).",
-        "\n Consider process = T as a control parameter. See Details of ?icmr."
+        "\n    Consider process = T. See Details with ?icmr"
       )
-    stop(paste0(message))
+      stop(paste0(sms, collapse = ""))
+    }
 
   }
 
@@ -185,8 +187,12 @@ predict.icmr <- function(object, newdata, alpha = NULL, conformal = T, ...) {
   } else {
 
     # Processing Layer
-    if (!is.null(object$processing))
-      x <- compute(object = object$processing, x = newdata)
+    if (!is.null(object$processing)) {
+       x <- compute(object = object$processing, x = newdata)
+    } else {
+       x <- newdata
+    }
+
 
     if (conformal) {
       prediction <- compute(object = object$conformal, x = x, alpha = alpha)

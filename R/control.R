@@ -45,7 +45,7 @@ icmr.control <- function(alpha = 0.05, process = T, interval = NULL) {
   control.list <- structure(
     .Data = list(
       alpha = alpha,
-      process = T,
+      process = process,
       interval = interval,
       truncate = T
     ),

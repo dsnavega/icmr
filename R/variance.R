@@ -34,7 +34,7 @@ is.variance.layer <- function(x) {
 #'
 initialise.variance.layer <- function(object, estimate.layer) {
 
-  if(!is.variance.layer(object))
+  if (!is.variance.layer(object))
     stop("\n(-) object is not a 'variance.layer'.")
 
   if (is.estimate.layer(estimate.layer)) {
@@ -44,17 +44,17 @@ initialise.variance.layer <- function(object, estimate.layer) {
   }
 
   variance <- abs(estimate.layer$regressor$diagnostics$residual)
-  regressor <- ridge(A = estimate, b = variance)
+  regressor <- irls(x = estimate, y = variance)
 
-  variance <- regressor$predicted * 1.2533
+  variance <- regressor$value * 1.2533
   n <- length(variance)
   interval <- c(sd(variance) / sqrt(n - 1), max(variance) + sd(variance))
   variance <- pmax(pmin(variance, interval[2]), interval[1])
 
-  regressor$predicted <- variance
+  regressor$value <- variance
 
   layer <- structure(
-    .Data = list (
+    .Data = list(
       regressor = regressor,
       truncate = T,
       interval = interval,
@@ -76,12 +76,12 @@ compute.variance.layer <- function(object, x) {
 
   if (missing(x)) {
 
-    variance <- object$regressor$predicted
+    variance <- object$regressor$value
     return(variance)
 
   } else {
 
-    variance <- predict(object = object$regressor, newdata = x)
+    variance <- predict(object = object$regressor, x = x)
     variance <- as.numeric(variance * object$scaling)
 
     if (object$truncate)

@@ -36,10 +36,6 @@ create.layer <- function(type, ...) {
       structure(.Data = list(...), class = c("processing.layer"))
     },
 
-    "selection" = {
-      structure(.Data = list(...), class = c("selection.layer"))
-    },
-
     "estimate" = {
       structure(.Data = list(...), class = c("estimate.layer"))
     },

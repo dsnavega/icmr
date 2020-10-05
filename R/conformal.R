@@ -36,7 +36,7 @@ initialise.conformal.layer <- function(
   object, estimate.layer, variance.layer, control
 ) {
 
-  if(!is.conformal.layer(object))
+  if (!is.conformal.layer(object))
     stop("\n(-) object is not a 'conformal.regression.layer'.")
 
   if (is.estimate.layer(estimate.layer)) {
@@ -46,7 +46,7 @@ initialise.conformal.layer <- function(
   }
 
   if (is.variance.layer(variance.layer)) {
-    variance <- variance.layer$regressor$predicted
+    variance <- variance.layer$regressor$value
   } else {
     stop("\n(-) 'variance.layer' not supplied to 'conformal.layer'.")
   }
@@ -67,7 +67,7 @@ initialise.conformal.layer <- function(
     .Data = list(
       estimate.layer = estimate.layer,
       variance.layer = variance.layer,
-      factor = conformal.factor,
+      scaling = conformal.factor,
       alpha = control$alpha
     ),
     class = "conformal.layer"
@@ -89,7 +89,7 @@ compute.conformal.layer <- function(object, x, alpha) {
 
   confidence <- 1 - alpha
 
-  if (confidence < 0.5 | confidence > 0.99)
+  if (any(confidence < 0.5) | any(confidence > 0.99))
     stop("\n(-) alpha must be a numeric value between 0.01 and 0.5.")
 
   estimate.layer <- object$estimate.layer
@@ -98,15 +98,15 @@ compute.conformal.layer <- function(object, x, alpha) {
   truncate <- estimate.layer$truncate
   interval <- estimate.layer$interval
 
-  conformal.factor <- object$factor[format(confidence, digits = 2)]
+  scaling <- object$scaling[format(confidence, digits = 2)]
 
   if (missing(x)) {
 
     estimate <- compute(estimate.layer)
     variance <- compute(variance.layer)
 
-    lower <- estimate - (variance * conformal.factor)
-    upper <- estimate + (variance * conformal.factor)
+    lower <- estimate - (variance * scaling)
+    upper <- estimate + (variance * scaling)
 
     predicted <- cbind(estimate = estimate, lower = lower, upper = upper)
     colnames(predicted) <- c("estimate", "lower", "upper")
@@ -121,8 +121,8 @@ compute.conformal.layer <- function(object, x, alpha) {
     estimate <- compute(estimate.layer, x = x)
     variance <- compute(variance.layer, x = estimate)
 
-    lower <- estimate - (variance * conformal.factor)
-    upper <- estimate + (variance * conformal.factor)
+    lower <- estimate - (variance * scaling)
+    upper <- estimate + (variance * scaling)
     predicted <- cbind(estimate = estimate, lower = lower, upper = upper)
     colnames(predicted) <- c("estimate", "lower", "upper")
 
