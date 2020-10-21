@@ -24,7 +24,7 @@
 
 #' Inductive Confidence Machine for Regression
 #'
-#' Reliable regression modelling using an Inductive Confidence Machine based on
+#' Reliable regression modeling using an Inductive Confidence Machine based on
 #' Ridge Regression
 #'
 #' @author David Senhora Navega
@@ -34,10 +34,12 @@
 #' @param x a column-oriented matrix or a data.frame of numeric vector(s).
 #' @param y a numeric vector
 #' @param control a list of parameters created by \code{\link{icmr.control}}
+#' @param weights a vector of non-negative weights.
+#' @param kernel a logical stating if x is a kernel matrix.
 #'
 #' @return a icmr object
 #'
-icmr <- function(x, y, control = icmr.control()) {
+icmr <- function(x, y, weights = NULL, kernel = F, control = icmr.control()) {
 
   # TIC
   start.clock <- Sys.time()
@@ -46,8 +48,11 @@ icmr <- function(x, y, control = icmr.control()) {
   if (!is.matrix(x))
     stop("\n(-) x must be a numeric matrix.")
 
+  if (any(is.na(x)))
+    stop("\n(!) NA values not allowed in x.")
+
   if (any(is.na(y)))
-    stop("\n(-) No NA value is allowed in y.")
+    stop("\n(-) NA values not allowed in y.")
 
   if (!(is.vector(y) & is.numeric(y)))
     stop("\n(-) y must be a numeric vector.")
@@ -59,55 +64,41 @@ icmr <- function(x, y, control = icmr.control()) {
     stop("\n(-) control is not an object created by 'icmr.control().'")
 
   # Coerce to Matrix Form
+
   x <- rbind(x)
   y <- cbind(y)
 
-  # Processing Layer
-  if (control$process) {
-
-    if (any(is.na(x)))
-      warning("\n(!) NA values detected in x. Mean imputation applied.")
-
-    processing.layer <- initialise(
-      object = create.layer(type = "processing"),
-      x = x
-    )
-
-    x <- compute(object = processing.layer, x = x)
-
+  if (is.null(weights)) {
+    weights <- rep(1, times = nrow(x))
   } else {
 
-    processing.layer <- NULL
+    if (!(is.vector(weights) & is.numeric(weights)))
+      stop("\n(-) weights must be a numeric vector.")
 
-    if (any(is.na(x))) {
-      sms <- c(
-        "\n(-) NA values detected (x).",
-        "\n    Consider process = T. See Details with ?icmr"
-      )
-      stop(paste0(sms, collapse = ""))
-    }
+    if (any(weights < 0))
+      stop("\n(-) Negative weights not allowed.")
+
+    if (length(weights) != nrow(x))
+      stop("\n(-) weights must be a", nrow(x), "length vector.")
 
   }
 
   # Estimate Layer
   estimate.layer <- initialise(
     object = create.layer(type = "estimate"),
-    x = x, y = y,
-    control = control
+    x = x, y = y, weights = weights, kernel = kernel, control = control
   )
 
   # Variance Layer
   variance.layer <- initialise(
     object = create.layer("variance"),
-    estimate.layer = estimate.layer
+    estimate = estimate.layer, x = x, weights = weights, kernel = kernel
   )
 
   # Conformal (Confidence Machine) Layer
   conformal.layer <- initialise(
     object = create.layer(type = "conformal"),
-    estimate.layer = estimate.layer,
-    variance.layer = variance.layer,
-    control = control
+    estimate = estimate.layer, variance = variance.layer, control = control
   )
 
   # TOC
@@ -119,7 +110,6 @@ icmr <- function(x, y, control = icmr.control()) {
   # Class Object
   object <- structure(
     .Data = list(
-      processing = processing.layer,
       conformal = conformal.layer,
       alpha = control$alpha,
       time = time
@@ -136,12 +126,12 @@ icmr <- function(x, y, control = icmr.control()) {
 #'
 is.icmr <- function(x) inherits(x = x, what = "icmr")
 
-#' Predic method for Inductive Confidence Machine for Regression
+#' Predict method for Inductive Confidence Machine for Regression
 #' @author David Senhora Navega
 #' @export
 #'
 #' @param object an icmr object
-#' @param newdata a numeric vector or matrix with the same variables used to
+#' @param x a numeric vector or matrix with the same variables used to
 #' create the icmr object
 #' @param alpha level of error tolerance or confidence for predictive intervals
 #' computed when conformal = T. Note confidence = 1 - alpha, with alpha assuming
@@ -152,7 +142,8 @@ is.icmr <- function(x) inherits(x = x, what = "icmr")
 #'
 #' @details
 #' ...
-predict.icmr <- function(object, newdata, alpha = NULL, conformal = T, ...) {
+#'
+predict.icmr <- function(object, x, alpha = NULL, conformal = T, ...) {
 
   # Exception Handling
   if (!is.icmr(x = object))
@@ -170,7 +161,7 @@ predict.icmr <- function(object, newdata, alpha = NULL, conformal = T, ...) {
   if (!is.logical(conformal))
     stop("\n(-) 'interval' argument must be a logical.")
 
-  if (missing(newdata)) {
+  if (missing(x)) {
 
     if (conformal) {
       prediction <- compute(object = object$conformal, alpha = alpha)
@@ -185,14 +176,6 @@ predict.icmr <- function(object, newdata, alpha = NULL, conformal = T, ...) {
     }
 
   } else {
-
-    # Processing Layer
-    if (!is.null(object$processing)) {
-       x <- compute(object = object$processing, x = newdata)
-    } else {
-       x <- newdata
-    }
-
 
     if (conformal) {
       prediction <- compute(object = object$conformal, x = x, alpha = alpha)
@@ -214,6 +197,53 @@ predict.icmr <- function(object, newdata, alpha = NULL, conformal = T, ...) {
 #' @author David Senhora Navega
 #' @noRd
 #'
+#' @export
+#'
 print.icmr <- function(object) {
-  cat("\n Inductive Confidence Machine using Ridge Regression")
+  cat("\n Inductive Confidence Machine: ")
+  print(object$conformal$estimate.layer$regressor)
 }
+
+#' Control List for Inductive Confidence Machine for Regression
+#'
+#' @author David Navega
+#' @export
+#'
+#' @param alpha a numeric defining the tolerance or confidence (1 - alpha) of
+#' the predictive intervals of icmr model. Default is 0.05
+#' @param interval a vector of two numeric values defining the domain of the
+#' predictions generated by the icmr model for a continuous output.
+#' Default is NULL which means that the interval is computed from the data.
+#' @param delta a numeric value between 0 and 1 that control the extrapolation
+#' of the icmr model outside of the bounds of the values known for continuous
+#' output. 0 means no extrapolation. This parameter affects both the
+#' point estimates and the prediction intervals. Default is 0.25.
+#'
+#' @return a list with the parameters given as arguments to the function call.
+#'
+icmr.control <- function(alpha = 0.05, interval = NULL, delta = 0.25) {
+
+  if (alpha < 0.01  | alpha > 0.5)
+    stop("\n(-) alpha must be a numeric value between 0.01 and 0.5.")
+
+  if (delta < 0.0  | delta > 1)
+    stop("\n(-) delta must be a numeric value between 0.0 and 1.")
+
+  control.list <- structure(
+    .Data = list(
+      alpha = alpha,
+      interval = interval,
+      delta = delta,
+      truncate = T  # Internal Usage
+    ),
+    class = "icmr.control"
+  )
+
+  return(control.list)
+
+}
+
+#' @author David Senhora Navega
+#' @noRd
+#'
+is.icmr.control <- function(x) inherits(x = x, what = "icmr.control")

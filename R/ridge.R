@@ -35,13 +35,10 @@
 #'
 #' @param A a matrix of predictor(s)
 #' @param b a column-oriented matrix with the response(s)
-#' @param center a named list with components 'A' and 'b' storing the parameters
-#' for centering A and b. The aforementioned parameters should be supplied as a
-#' numeric vector with the length maching the number of columns of A and b.
-#' Default is a named list with NULL components, data is centered based on
-#'  average value of the column(s) of A and b. See Details.
-#' @param W a numerical vector of weights, used for weighted regression. Default
-#' is NULL. See Details.
+#' @param W a numeric vector of weights, used for weighted regression. Default
+#' is NULL.
+#' @param kernel a logical stating if A is a kernel matrix. Default = F.
+#'
 #' @returns a "ridge" object (See Details.)
 #' @references
 #' Shao, Z., & Er, M. J. (2016). Efficient Leave-One-Out Cross-Validation-based
@@ -49,33 +46,29 @@
 #' https://doi.org/10.1016/j.neucom.2016.02.058
 #' @details
 #' No intercept is fitted in this implementation, instead the response
-#' (b) is centered on its average value (Default) or a the value(s) supplied in
-#' the b component of the named list supplied through the center argument. The
-#' equivalent to the model intercept is stored in component 'center$b' of the
-#' object created by this function.
-#' If W is supplied both A and b are centered on the weighted average value of
-#' the column(s) of A and b. The value of A and b are then scaled by the square
-#' root of W. This allows for efficient weighted ridge regression.
+#' (b) is centered on its average value (Default). If W is supplied both A and b are centered on the weighted average value of
+#' the column(s) of A and b. This allows for efficient weighted ridge regression.
 #'
 #' The ridge object (list) has the following components:
 #' * "x": Model Coefficients. See See Details
-#' * "mse": Mean Square Error, Leave-One-Out.
-#' * "nmse": Normalized Mean Squared Error, Leave-One-Out.
+#' * "rmse": Root Mean Square Error, Leave-One-Out.
 #' * "predicted": Fitted values Leave-One-Out.
 #' * "diagnostics": a list of model diagnostics information.
-#' * "C": Optimal lambda penalty term.
-#' * "center": A list of parameters for data centering. See Details.
+#' * "C": Optimal, lambda, penalty term.
+#' * "scaling": A list of parameters for data scaling.
+#' * "kernel": a logical stating if the model is a kernel rigde regression model
+#' * "K": the kernel matrix supplied as A.
 #'
-ridge <- function(A, b, center = list(A = NULL, b = NULL), W = NULL) {
+ridge <- function(A, b, W = NULL, kernel = F, label = NULL) {
 
   # Exception Handling
-  if(any(is.na(A)))
+  if (any(is.na(A)))
     stop("\n(-) NA values detected in A.")
 
-  if(any(is.na(b)))
+  if (any(is.na(b)))
     stop("\n(-) NA values detected in b.")
 
-  if(any(is.na(b)))
+  if (any(is.na(b)))
     stop("\n(-) NA values detected in b.")
 
   # if(!(is.vector(A) & is.numeric(A)) & !is.matrix(A))
@@ -84,39 +77,35 @@ ridge <- function(A, b, center = list(A = NULL, b = NULL), W = NULL) {
   if ((is.vector(A) | is.numeric(A)))
     A <- cbind(A)
 
-  if(!(is.vector(b) & is.numeric(b)) & !is.matrix(b))
+  if (!(is.vector(b) & is.numeric(b)) & !is.matrix(b))
     stop("\n(-) b must be a numeric vector or a matrix.")
 
   if ((is.vector(b) | is.numeric(b)))
     b <- cbind(b)
 
-  if(nrow(A) != nrow(b))
+  if (nrow(A) != nrow(b))
     stop("\n(-) A and b do not have the same number of observations.")
+
+  if (kernel)
+    W <- NULL
 
   if (!is.null(W)) {
 
-    if(any(is.na(W)))
+    if (any(is.na(W)))
       stop("\n(-) NA values detected in W.")
 
-    if(!(is.vector(W) & is.numeric(W)))
+    if (!(is.vector(W) & is.numeric(W)))
       stop("\n(-) W must be a numeric vector.")
 
-    if(nrow(A) != length(W))
+    if (nrow(A) != length(W))
       stop("\n(-) Number of weights do not match number of observations.")
 
-    if(any(W < 0))
+    if (any(W < 0))
       stop("\n(-) Weights must be positive.")
 
   }
 
-  if (!is.list(center))
-    stop("\n(-) center must be a list.")
-
-  if (!all(c("A", "b") %in% names(center)))
-    stop("\n(-) center must be a list with two named components 'A' and 'b'.")
-
   # Parameters
-  center <- center[c("A", "b")]
   n <- nrow(A)
   p <- ncol(A)
   m <- ncol(b)
@@ -124,49 +113,42 @@ ridge <- function(A, b, center = list(A = NULL, b = NULL), W = NULL) {
   if (is.null(colnames(A)))
     colnames(A) <- paste0("A", seq_len(ncol(A)))
 
-  # Center Data
-  if (!is.null(W)) {
+  if (is.null(W))
+    W <- rep(x = 1, times = n)
 
-    center_A <- as.numeric(t(cbind(W)) %*% A) / sum(W)
-    names(center_A) <- colnames(A)
-    A <- sweep(A, 2, center_A,  "-") * sqrt(W)
+  # Scaling
+  scaling <- list(
+    A = list(
+      mean = apply(A, 2, weighted_mean, weights = W),
+      sd = apply(A, 2, weighted_sd, weights = W)
+      # sd = rep(x = 1, times = ncol(A))
+    ),
+    b = list(
+      mean = apply(b, 2, weighted_mean, weights = W),
+      # sd = apply(b, 2, weighted_sd, weights = W)
+      sd = rep(x = 1, times = ncol(b))
+    )
+  )
 
-    center_b <- as.numeric((t(cbind(W)) %*% b) / sum(W))
-    b <- sweep(b, 2, center_b,  "-") * sqrt(W)
-
-  } else {
-
-    if (is.null(center$A)) {
-      center_A <- as.numeric(colMeans(x = A))
-      names(center_A) <- colnames(A)
-    } else {
-      pA <- length(center$A)
-      if(length(center$A) != p)
-        stop("\n(!) length(center$A) != ncol(A) [", pA, ", ", p, "].")
-      center_A <- center$A
-      names(center_A) <- colnames(A)
-    }
-
-    if (is.null(center$b)) {
-      center_b <- as.numeric(colMeans(x = b))
-      names(center_b) <- colnames(b)
-    } else {
-      pb <- length(center$b)
-      if(length(center$b) != m)
-        stop("\n(!) length(center$A) != ncol(A) [", pb, ", ", m, "].")
-      center_b <- center$b
-    }
-
-    if (is.null(center$A) & !is.null(center$b))
-      center_A <- rep(0, p)
-
-    A <- sweep(A, 2, center_A,  "-")
-    b <- sweep(b, 2, center_b,  "-")
-
+  if (all(unique(A) %in% c(0, 1)) | kernel) {
+    scaling$A$mean <- rep(x = 0, times = p)
+    scaling$A$sd <- rep(x = 1, times = p)
   }
 
-  # Algorithm
-  if(nrow(A) > ncol(A)) {
+  if (kernel) {
+    A <- center_kernel(x = A)
+  } else {
+    A <- sweep(A, 2, scaling$A$mean, "-")
+    A <- sweep(A, 2, scaling$A$sd, "/")
+    A <- A * sqrt(W)
+  }
+
+  b <- sweep(b, 2, scaling$b$mean, "-")
+  b <- sweep(b, 2, scaling$b$sd, "/")
+  b <- b * sqrt(W)
+
+  # Fitting
+  if (nrow(A) > ncol(A)) {
 
     # Singular Value Decomposition
     svd <- svd(A)
@@ -174,10 +156,11 @@ ridge <- function(A, b, center = list(A = NULL, b = NULL), W = NULL) {
     S <- svd$d
     V <- svd$v
 
-    # Helper functions
+    # Helpers
     compute_estimate <- function(C, U, S, V, b) {
 
       # Regularization
+      C <- rep(C, times = length(S))
       theta <- (S ^ 2) / ((S ^ 2) + C)
       gamma <- theta * t(U)
 
@@ -185,10 +168,10 @@ ridge <- function(A, b, center = list(A = NULL, b = NULL), W = NULL) {
       H <- rowSums(U * t(gamma))
 
       # Estimate of b
-      Y <- U %*% (gamma %*% b)
+      Y <- U %*% gamma %*% b
 
       # Leave-One-Out Mean Squared Error & Normalized Mean Squared Error
-      if(m > 1) {
+      if (m > 1) {
 
         yvar <-  apply(b, 2, var)
         mse <- (1 / n) * colSums((((b - Y) / (1 - H)) ^ 2))
@@ -203,7 +186,7 @@ ridge <- function(A, b, center = list(A = NULL, b = NULL), W = NULL) {
       }
 
       # Leave-One-Out Estimate
-      Y <- ((Y - (b * H)) / (1 - H))
+      Y <- (Y - b * H) / (1 - H)
 
       # Attribute names
       colnames(Y) <- colnames(b)
@@ -217,13 +200,11 @@ ridge <- function(A, b, center = list(A = NULL, b = NULL), W = NULL) {
     }
 
     compute_coefficients <- function(C, U, S, V, b) {
-
       # Regularization
+      C <- rep(C, times = length(S))
       theta <- S / ((S ^ 2) + C)
-
       # Regression Coefficients
-      beta <- V %*% (theta * (t(U) %*% b))
-
+      beta <- V %*% (theta * t(U) %*% b)
       return(beta)
     }
 
@@ -243,10 +224,19 @@ ridge <- function(A, b, center = list(A = NULL, b = NULL), W = NULL) {
     rownames(coefficient) <- colnames(A)
 
     estimate_object <- compute_estimate(U = U, S = S, V = V, b = b, C = C)
+
+    # Re-scaling
     fitted <- estimate_object$fitted
-    fitted <- sweep(fitted, 2, center_b, "+")
-    known <- sweep(b, 2, center_b, "+")
+    fitted <- sweep(fitted, 2, scaling$b$sd, "*")
+    fitted <- sweep(fitted, 2, scaling$b$mean, "+")
     colnames(fitted) <- colnames(b)
+
+    known <- b
+    known <- sweep(known, 2, scaling$b$sd, "*")
+    known <- sweep(known, 2, scaling$b$mean, "+")
+
+    scaler <- matrix(scaling$b$sd / scaling$A$sd, nrow = p, ncol = m, byrow = T)
+    coefficient <- rbind(Intercept = scaling$b$mean, coefficient * scaler)
 
     # Diagnostics
     leverage <- estimate_object$H
@@ -271,16 +261,13 @@ ridge <- function(A, b, center = list(A = NULL, b = NULL), W = NULL) {
     object <- structure(
       .Data = list(
         x = coefficient,
-        rmse = sqrt(estimate_object$mse),
-        mse = estimate_object$mse,
-        nmse = estimate_object$nmse,
+        rmse = sqrt(estimate_object$mse) * scaling$b$sd,
         predicted = fitted,
         diagnostics = diagnostics,
         C = C,
-        center = list(
-          A = center_A,
-          b = center_b
-        )
+        scaling = scaling,
+        kernel = kernel,
+        K = if (kernel) {A} else {NULL}
       ),
       class = "ridge"
     )
@@ -309,7 +296,7 @@ ridge <- function(A, b, center = list(A = NULL, b = NULL), W = NULL) {
       Y <- V %*% (gamma %*% b)
 
       # Leave-One-Out Mean Squared Error & Normalized Mean Squared Error
-      if(m > 1) {
+      if (m > 1) {
 
         yvar <-  apply(b, 2, var)
         mse <- (1 / n) * colSums((((b - Y) / (1 - H)) ^ 2))
@@ -325,14 +312,13 @@ ridge <- function(A, b, center = list(A = NULL, b = NULL), W = NULL) {
       }
 
       # Leave-One-Out Estimate
-      Y <- (Y - (b * H)) / (1 - H)
+      Y <- (Y - b * H) / (1 - H)
 
       # Attribute names
       colnames(Y) <- colnames(b)
       names(mse) <- colnames(b)
       names(nmse) <- colnames(b)
 
-      # return
       object <- list(mse = mse, nmse = nmse, fitted = Y, H = H)
       return(object)
 
@@ -367,10 +353,19 @@ ridge <- function(A, b, center = list(A = NULL, b = NULL), W = NULL) {
     rownames(coefficient) <- colnames(A)
 
     estimate_object <- compute_estimate(U = U, S = S, V = V, b = b, C = C)
+
+    # Re-scaling
     fitted <- estimate_object$fitted
-    fitted <- sweep(fitted, 2, center_b, "+")
-    known <- sweep(b, 2, center_b, "+")
+    fitted <- sweep(fitted, 2, scaling$b$sd, "*")
+    fitted <- sweep(fitted, 2, scaling$b$mean, "+")
     colnames(fitted) <- colnames(b)
+
+    known <- b
+    known <- sweep(known, 2, scaling$b$sd, "*")
+    known <- sweep(known, 2, scaling$b$mean, "+")
+
+    scaler <- matrix(scaling$b$sd / scaling$A$sd, nrow = p, ncol = m, byrow = T)
+    coefficient <- rbind(Intercept = scaling$b$mean, coefficient * scaler)
 
     # Diagnostics
     leverage <- estimate_object$H
@@ -378,6 +373,7 @@ ridge <- function(A, b, center = list(A = NULL, b = NULL), W = NULL) {
     variance <- sapply(estimate_object$mse, function(mse) {
       sqrt(mse * (1 - leverage))
     })
+
     studentized <- residual / variance
     dffits <- studentized * sqrt(leverage / (1 - leverage))
     cook <- (1 / p) * (studentized ^ 2 * (leverage / (1 - leverage)))
@@ -394,16 +390,13 @@ ridge <- function(A, b, center = list(A = NULL, b = NULL), W = NULL) {
     object <- structure(
       .Data = list(
         x = coefficient,
-        rmse = sqrt(estimate_object$mse),
-        mse = estimate_object$mse,
-        nmse = estimate_object$nmse,
+        rmse = sqrt(estimate_object$mse) * scaling$b$sd,
         predicted = fitted,
         diagnostics = diagnostics,
         C = C,
-        center = list(
-          A = center_A,
-          b = center_b
-        )
+        scaling = scaling,
+        kernel = kernel,
+        K = if (kernel) {A} else {NULL}
       ),
       class = "ridge"
     )
@@ -420,34 +413,38 @@ ridge <- function(A, b, center = list(A = NULL, b = NULL), W = NULL) {
 #' @noRd
 #'
 #' @param object a ridge object
-#' @param newdata a matrix of new data. If not given LOOCV predictions are
+#' @param x a matrix of new data. If not given LOOCV predictions are
 #' returned.
 #' @param ... not implemented
 #'
 #' @return a matrix or column vector with predicted values.
 #'
 #'
-predict.ridge <- function(object, newdata, ...) {
+predict.ridge <- function(object, x, ...) {
 
   if (!is.ridge(object))
     stop("\n(-) object is no a ridge model.")
 
-  if (missing(newdata)) {
+  if (missing(x)) {
     predicted <- object$predicted
     return(predicted)
   }
 
-  center_A <- object$center$A
-  center_b <- object$center$b
-  beta <- object$x
 
-  newdata <- rbind(newdata)
-  if (ncol(newdata) != nrow(beta))
-    stop("\n(-) Predictors in newdata do not match learned coefficients.")
+  if (object$kernel) {
 
-  newdata <- sweep(newdata, 2, center_A, "-")
-  predicted <- newdata %*% beta
-  predicted <- sweep(predicted, 2, center_b, "+")
+    newdata <- cbind(1, center_kernel(x = object$K, y = rbind(x)))
+
+  } else {
+
+    newdata <- sweep(rbind(x), 2, object$scaling$A$mean, "-")
+    newdata <- cbind(1, rbind(newdata))
+    colnames(newdata)[1] <- "Intercept"
+
+  }
+
+  rownames(newdata) <- seq_len(nrow(newdata))
+  predicted <- newdata %*% object$x
 
   return(predicted)
 
@@ -456,8 +453,16 @@ predict.ridge <- function(object, newdata, ...) {
 #'Print method for Ridge Regression
 #'@noRd
 print.ridge <- function(object,...) {
-  cat("\n Ridge Regression\n")
+
+  if (object$kernel) {
+    cat("\n Kernel Ridge Regression\n")
+  } else {
+     cat("\n Ridge Regression\n")
+  }
+
   cat("\n RMSE (LOOCV):", mean(object$rmse))
+  cat("\n Lambda:", mean(object$C))
+
 }
 
 #' @author David Senhora Navega
@@ -465,3 +470,48 @@ print.ridge <- function(object,...) {
 #'
 is.ridge <- function(x) inherits(x = x, what = "ridge")
 
+#' @author David Senhora Navega
+#' @noRd
+#'
+weighted_mean <- function(x, weights, na.rm = T) {
+  value <- sum(x * weights, na.rm = na.rm) / sum(weights, na.rm = na.rm)
+  return(value)
+}
+
+#' @author David Senhora Navega
+#' @noRd
+#'
+weighted_sd <- function(x, weights, na.rm = T) {
+  ss <- ((x - weighted_mean(x = x,weights = weights)) ^ 2)
+  wss <- sum(x = ss * weights, na.rm = na.rm) / sum(x = weights, na.rm = na.rm)
+  value <- sqrt(wss)
+  return(value)
+}
+
+#' @author David Senhora Navega
+#' @noRd
+#'
+center_kernel <- function(x, y) {
+
+  if (missing(y)) {
+
+    n <- nrow(x)
+    one <- matrix(data = 1 / n, nrow = n, ncol = n)
+    x <- x - one %*% x - x %*% one + one %*% x %*% one
+
+    return(invisible(x))
+
+  } else {
+
+    n <- nrow(y)
+    m <- ncol(y)
+
+    one <- matrix(1 / m, m, m)
+    two <- matrix(1 / m, n, m)
+    y <- y - two %*% x - y %*% one + two %*% x %*% one
+
+    return(invisible(y))
+
+  }
+
+}

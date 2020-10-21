@@ -2,14 +2,14 @@
 % Please edit documentation in R/icmr.R
 \name{predict.icmr}
 \alias{predict.icmr}
-\title{Predic method for Inductive Confidence Machine for Regression}
+\title{Predict method for Inductive Confidence Machine for Regression}
 \usage{
-\method{predict}{icmr}(object, newdata, alpha = NULL, conformal = T, ...)
+\method{predict}{icmr}(object, x, alpha = NULL, conformal = T, ...)
 }
 \arguments{
 \item{object}{an icmr object}
 
-\item{newdata}{a numeric vector or matrix with the same variables used to
+\item{x}{a numeric vector or matrix with the same variables used to
 create the icmr object}
 
 \item{alpha}{level of error tolerance or confidence for predictive intervals
@@ -22,7 +22,7 @@ using conformal prediction framework. See Details.}
 \item{...}{...}
 }
 \description{
-Predic method for Inductive Confidence Machine for Regression
+Predict method for Inductive Confidence Machine for Regression
 }
 \details{
 ...

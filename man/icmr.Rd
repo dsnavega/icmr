@@ -4,12 +4,16 @@
 \alias{icmr}
 \title{Inductive Confidence Machine for Regression}
 \usage{
-icmr(x, y, control = icmr.control())
+icmr(x, y, weights = NULL, kernel = F, control = icmr.control())
 }
 \arguments{
 \item{x}{a column-oriented matrix or a data.frame of numeric vector(s).}
 
 \item{y}{a numeric vector}
+
+\item{weights}{a vector of non-negative weights.}
+
+\item{kernel}{a logical stating if x is a kernel matrix.}
 
 \item{control}{a list of parameters created by \code{\link{icmr.control}}}
 }
@@ -17,7 +21,7 @@ icmr(x, y, control = icmr.control())
 a icmr object
 }
 \description{
-Reliable regression modelling using an Inductive Confidence Machine based on
+Reliable regression modeling using an Inductive Confidence Machine based on
 Ridge Regression
 }
 \author{

@@ -28,12 +28,7 @@ prediction <- predict(object = icmr.object, newdata = z, alpha = 0.05)
 ```
 
 In the **Usage** example \``x` is assumed to be a matrix of numeric
-values and `y` a vector of numeric data. If `NA` values are present in
-`x` by default the algorithm will process the data with standardization
-and perform a fast mean imputation of missing values. This can be
-overridden by providing `process = F` as an argument to the
-`icmr.control()` function. In that case the user should apply is own
-pipeline for pre-process the data and impute missing values.
+values and `y` a vector of numeric data.
 
 References
 ----------

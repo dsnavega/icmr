@@ -23,11 +23,9 @@ devtools::install_github(repo = "dsnavega/icmr")
 icmr.object <- icmr(x = x, y = y, control = icmr.control())
 
 # Obtaining a prediction
-prediction <- predict(object = icmr.object, newdata = z, alpha = 0.05)
+prediction <- predict(object = icmr.object, x = z, alpha = 0.05)
 ```
-In the **Usage** example ``x` is assumed to be a matrix of numeric values and `y` a vector of numeric data. If `NA` values are present in `x` by default the algorithm will process the data with standardization and perform a fast mean imputation of missing values. This can be overridden by providing `process = F`
-as an argument to the `icmr.control()` function. In that case the user should
-apply is own pipeline for pre-process the data and impute missing values.
+In the **Usage** example ``x` is assumed to be a matrix of numeric values and `y` a vector of numeric data.
 
 ## References
 1. Balasubramanian VN, Ho S-S, Vovk V (2016) Conformal Prediction for Reliable Machine Learning

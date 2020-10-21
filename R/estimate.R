@@ -30,25 +30,24 @@ is.estimate.layer <- function(x) inherits(x = x, what = "estimate.layer")
 #' @author David Senhora Navega
 #' @noRd
 #'
-initialise.estimate.layer <- function(object, x, y, control) {
+initialise.estimate.layer <- function(object, x, y, weights, kernel, control) {
 
-  .truncate <- function(x, interval) pmax(pmin(x, interval[2]), interval[1])
+  truncator <- function(x, interval) pmax(pmin(x, interval[2]), interval[1])
 
-  if(!is.estimate.layer(object))
+  if (!is.estimate.layer(object))
     stop("\n(-) object is not an 'estimate.layer'.")
 
   if (is.null(control$interval) & ncol(y) == 1) {
     n <- sum(!is.na(y))
-    bw <- sd(x = y, na.rm = T)  * n ^ -0.25
-    control$interval <- range(x = y, na.rm = T) + c(-bw, bw) * 0.5
+    bw <- (sd(x = y, na.rm = T)  * n ^ -0.25) * control$delta
+    control$interval <- range(x = y, na.rm = T) + c(-bw, bw)
   }
 
   # Compute Ridge Regression
-  regressor <- ridge(A = x, b = y)
+  regressor <- ridge(A = x, b = y, W = weights, kernel = kernel)
 
-  if (control$truncate & ncol(y) == 1) {
-    regressor$predicted <- .truncate(regressor$predicted, control$interval)
-  }
+  if (control$truncate & ncol(y) == 1)
+    regressor$predicted <- truncator(regressor$predicted, control$interval)
 
   layer <- structure(
     .Data = list(
@@ -68,19 +67,19 @@ initialise.estimate.layer <- function(object, x, y, control) {
 #'
 compute.estimate.layer <- function(object, x) {
 
-  .truncate <- function(x, interval) pmax(pmin(x, interval[2]), interval[1])
+  truncator <- function(x, interval) pmax(pmin(x, interval[2]), interval[1])
 
-  if(!is.estimate.layer(object))
+  if (!is.estimate.layer(object))
     stop("\n(-) object is not an 'estimate.layer'.")
 
   if (missing(x))
     return(object$regressor$predicted)
 
   newdata <- x
-  predicted <- predict(object = object$regressor, newdata = newdata)
+  predicted <- predict(object = object$regressor, x = newdata)
 
   if (object$truncate)
-    predicted <- .truncate(predicted, object$interval)
+    predicted <- truncator(predicted, object$interval)
 
   return(predicted)
 

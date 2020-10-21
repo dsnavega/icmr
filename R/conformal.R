@@ -32,41 +32,37 @@ is.conformal.layer <- function(x) {
 #' @author David Senhora Navega
 #' @noRd
 #'
-initialise.conformal.layer <- function(
-  object, estimate.layer, variance.layer, control
-) {
+initialise.conformal.layer <- function(object, estimate, variance, control) {
 
   if (!is.conformal.layer(object))
     stop("\n(-) object is not a 'conformal.regression.layer'.")
 
-  if (is.estimate.layer(estimate.layer)) {
-    loss <- abs(estimate.layer$regressor$diagnostics$residual)
+  if (is.estimate.layer(estimate)) {
+    loss <- abs(estimate$regressor$diagnostics$residual)
   } else {
     stop("\n(-) 'estimate.layer' not supplied to 'conformal.layer'.")
   }
 
-  if (is.variance.layer(variance.layer)) {
-    variance <- variance.layer$regressor$value
-  } else {
+  if (!is.variance.layer(variance)) {
     stop("\n(-) 'variance.layer' not supplied to 'conformal.layer'.")
   }
 
 
-  conformal.score <- loss / variance
-  n <- length(variance)
+  conformal.score <- loss / variance$regressor$predicted
+  n <- length(loss)
   confidence <- seq(from = 0.5, 0.99, by = 0.01)
   conformal.factor <- sapply(confidence, function(confidence) {
     sort(conformal.score)[ceiling(n * confidence)]
   })
   names(conformal.factor) <- as.character(confidence)
 
-  estimate.layer$regressor$diagnostics$residual <- NULL
-  variance.layer$regressor$diagnostics$residual <- NULL
+  estimate$regressor$diagnostics$residual <- NULL
+  variance$regressor$diagnostics$residual <- NULL
 
   layer <- structure(
     .Data = list(
-      estimate.layer = estimate.layer,
-      variance.layer = variance.layer,
+      estimate.layer = estimate,
+      variance.layer = variance,
       scaling = conformal.factor,
       alpha = control$alpha
     ),
@@ -82,7 +78,7 @@ initialise.conformal.layer <- function(
 #'
 compute.conformal.layer <- function(object, x, alpha) {
 
-  .truncate <- function(x, interval) pmax(pmin(x, interval[2]), interval[1])
+  truncator <- function(x, interval) pmax(pmin(x, interval[2]), interval[1])
 
   if (missing(alpha))
     alpha <- object$alpha
@@ -112,7 +108,7 @@ compute.conformal.layer <- function(object, x, alpha) {
     colnames(predicted) <- c("estimate", "lower", "upper")
 
     if (truncate)
-      predicted <- .truncate(predicted, interval)
+      predicted <- truncator(predicted, interval)
 
     return(predicted)
 
@@ -127,7 +123,7 @@ compute.conformal.layer <- function(object, x, alpha) {
     colnames(predicted) <- c("estimate", "lower", "upper")
 
     if (truncate)
-      predicted <- .truncate(predicted, interval)
+      predicted <- truncator(predicted, interval)
 
     return(predicted)
 

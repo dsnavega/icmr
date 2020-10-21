@@ -32,26 +32,24 @@ is.variance.layer <- function(x) {
 #' @author David Senhora Navega
 #' @noRd
 #'
-initialise.variance.layer <- function(object, estimate.layer) {
+initialise.variance.layer <- function(object, estimate, x, weights, kernel) {
 
   if (!is.variance.layer(object))
     stop("\n(-) object is not a 'variance.layer'.")
 
-  if (is.estimate.layer(estimate.layer)) {
-    estimate <- estimate.layer$regressor$predicted
-  } else {
+  if (!is.estimate.layer(estimate))
     stop("\n(-) 'estimate.layer' not supplied to 'variance.layer'.")
-  }
 
-  variance <- abs(estimate.layer$regressor$diagnostics$residual)
-  regressor <- irls(x = estimate, y = variance)
+  variance <- abs(estimate$regressor$diagnostics$residual)
+  x <- estimate$regressor$predicted
+  regressor <- ridge(A = x, b = variance, W = weights, kernel = F)
 
-  variance <- regressor$value * 1.2533
-  n <- length(variance)
+  variance <- regressor$predicted * 1.2533
+  n <- nrow(variance)
   interval <- c(sd(variance) / sqrt(n - 1), max(variance) + sd(variance))
   variance <- pmax(pmin(variance, interval[2]), interval[1])
 
-  regressor$value <- variance
+  regressor$predicted <- variance
 
   layer <- structure(
     .Data = list(
@@ -72,20 +70,18 @@ initialise.variance.layer <- function(object, estimate.layer) {
 #'
 compute.variance.layer <- function(object, x) {
 
-  .truncate <- function(x, interval) pmax(pmin(x, interval[2]), interval[1])
+  truncator <- function(x, interval) pmax(pmin(x, interval[2]), interval[1])
 
   if (missing(x)) {
-
-    variance <- object$regressor$value
+    variance <- object$regressor$predicted
     return(variance)
-
   } else {
 
     variance <- predict(object = object$regressor, x = x)
     variance <- as.numeric(variance * object$scaling)
 
     if (object$truncate)
-      variance <- .truncate(variance, object$interval)
+      variance <- truncator(x = variance, object$interval)
 
     return(variance)
 

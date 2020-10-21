@@ -32,10 +32,6 @@ create.layer <- function(type, ...) {
 
   layer <- switch(type,
 
-    "processing" = {
-      structure(.Data = list(...), class = c("processing.layer"))
-    },
-
     "estimate" = {
       structure(.Data = list(...), class = c("estimate.layer"))
     },
