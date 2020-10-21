@@ -40,7 +40,7 @@
 
 
 <meta property="og:title" content="Inductive Confidence Machine for Regression — icmr" />
-<meta property="og:description" content="Reliable regression modelling using an Inductive Confidence Machine based on
+<meta property="og:description" content="Reliable regression modeling using an Inductive Confidence Machine based on
 Ridge Regression" />
 
 
@@ -115,11 +115,11 @@ Ridge Regression" />
     </div>
 
     <div class="ref-description">
-    <p>Reliable regression modelling using an Inductive Confidence Machine based on
+    <p>Reliable regression modeling using an Inductive Confidence Machine based on
 Ridge Regression</p>
     </div>
 
-    <pre class="usage"><span class='fu'>icmr</span><span class='op'>(</span><span class='va'>x</span>, <span class='va'>y</span>, control <span class='op'>=</span> <span class='fu'><a href='icmr.control.html'>icmr.control</a></span><span class='op'>(</span><span class='op'>)</span><span class='op'>)</span></pre>
+    <pre class="usage"><span class='fu'>icmr</span><span class='op'>(</span><span class='va'>x</span>, <span class='va'>y</span>, weights <span class='op'>=</span> <span class='cn'>NULL</span>, kernel <span class='op'>=</span> <span class='cn'>F</span>, control <span class='op'>=</span> <span class='fu'><a href='icmr.control.html'>icmr.control</a></span><span class='op'>(</span><span class='op'>)</span><span class='op'>)</span></pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
@@ -131,6 +131,14 @@ Ridge Regression</p>
     <tr>
       <th>y</th>
       <td><p>a numeric vector</p></td>
+    </tr>
+    <tr>
+      <th>weights</th>
+      <td><p>a vector of non-negative weights.</p></td>
+    </tr>
+    <tr>
+      <th>kernel</th>
+      <td><p>a logical stating if x is a kernel matrix.</p></td>
     </tr>
     <tr>
       <th>control</th>
