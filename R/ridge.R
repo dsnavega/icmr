@@ -55,7 +55,7 @@
 #' * "predicted": Fitted values Leave-One-Out.
 #' * "diagnostics": a list of model diagnostics information.
 #' * "C": Optimal, lambda, penalty term.
-#' * "scaling": A list of parameters for data scaling.
+#' * "center": A list of parameters for data center.
 #' * "kernel": a logical stating if the model is a kernel rigde regression model
 #' * "K": the kernel matrix supplied as A.
 #'
@@ -116,35 +116,23 @@ ridge <- function(A, b, W = NULL, kernel = F, label = NULL) {
   if (is.null(W))
     W <- rep(x = 1, times = n)
 
-  # Scaling
-  scaling <- list(
-    A = list(
-      mean = apply(A, 2, weighted_mean, weights = W),
-      sd = apply(A, 2, weighted_sd, weights = W)
-      # sd = rep(x = 1, times = ncol(A))
-    ),
-    b = list(
-      mean = apply(b, 2, weighted_mean, weights = W),
-      # sd = apply(b, 2, weighted_sd, weights = W)
-      sd = rep(x = 1, times = ncol(b))
-    )
+  # center
+  center <- list(
+    A = apply(A, 2, weighted_mean, weights = W),
+    b = apply(b, 2, weighted_mean, weights = W)
   )
 
-  if (all(unique(A) %in% c(0, 1)) | kernel) {
-    scaling$A$mean <- rep(x = 0, times = p)
-    scaling$A$sd <- rep(x = 1, times = p)
-  }
+  if (all(unique(A) %in% c(0, 1)) | kernel)
+    center$A <- rep(x = 0, times = p)
 
   if (kernel) {
     A <- center_kernel(x = A)
   } else {
-    A <- sweep(A, 2, scaling$A$mean, "-")
-    A <- sweep(A, 2, scaling$A$sd, "/")
+    A <- sweep(A, 2, center$A, "-")
     A <- A * sqrt(W)
   }
 
-  b <- sweep(b, 2, scaling$b$mean, "-")
-  b <- sweep(b, 2, scaling$b$sd, "/")
+  b <- sweep(b, 2, center$b, "-")
   b <- b * sqrt(W)
 
   # Fitting
@@ -225,18 +213,15 @@ ridge <- function(A, b, W = NULL, kernel = F, label = NULL) {
 
     estimate_object <- compute_estimate(U = U, S = S, V = V, b = b, C = C)
 
-    # Re-scaling
+    # Re-Center
     fitted <- estimate_object$fitted
-    fitted <- sweep(fitted, 2, scaling$b$sd, "*")
-    fitted <- sweep(fitted, 2, scaling$b$mean, "+")
+    fitted <- sweep(fitted, 2, center$b, "+")
     colnames(fitted) <- colnames(b)
 
     known <- b
-    known <- sweep(known, 2, scaling$b$sd, "*")
-    known <- sweep(known, 2, scaling$b$mean, "+")
+    known <- sweep(known, 2, center$b, "+")
 
-    scaler <- matrix(scaling$b$sd / scaling$A$sd, nrow = p, ncol = m, byrow = T)
-    coefficient <- rbind(Intercept = scaling$b$mean, coefficient * scaler)
+    coefficient <- rbind(Intercept = center$b, coefficient)
 
     # Diagnostics
     leverage <- estimate_object$H
@@ -261,11 +246,11 @@ ridge <- function(A, b, W = NULL, kernel = F, label = NULL) {
     object <- structure(
       .Data = list(
         x = coefficient,
-        rmse = sqrt(estimate_object$mse) * scaling$b$sd,
+        rmse = sqrt(estimate_object$mse),
         predicted = fitted,
         diagnostics = diagnostics,
         C = C,
-        scaling = scaling,
+        center = center,
         kernel = kernel,
         K = if (kernel) {A} else {NULL}
       ),
@@ -354,18 +339,15 @@ ridge <- function(A, b, W = NULL, kernel = F, label = NULL) {
 
     estimate_object <- compute_estimate(U = U, S = S, V = V, b = b, C = C)
 
-    # Re-scaling
+    # Re-center
     fitted <- estimate_object$fitted
-    fitted <- sweep(fitted, 2, scaling$b$sd, "*")
-    fitted <- sweep(fitted, 2, scaling$b$mean, "+")
+    fitted <- sweep(fitted, 2, center$b, "+")
     colnames(fitted) <- colnames(b)
 
     known <- b
-    known <- sweep(known, 2, scaling$b$sd, "*")
-    known <- sweep(known, 2, scaling$b$mean, "+")
+    known <- sweep(known, 2, center$b, "+")
 
-    scaler <- matrix(scaling$b$sd / scaling$A$sd, nrow = p, ncol = m, byrow = T)
-    coefficient <- rbind(Intercept = scaling$b$mean, coefficient * scaler)
+    coefficient <- rbind(Intercept = center$b, coefficient)
 
     # Diagnostics
     leverage <- estimate_object$H
@@ -390,11 +372,11 @@ ridge <- function(A, b, W = NULL, kernel = F, label = NULL) {
     object <- structure(
       .Data = list(
         x = coefficient,
-        rmse = sqrt(estimate_object$mse) * scaling$b$sd,
+        rmse = sqrt(estimate_object$mse),
         predicted = fitted,
         diagnostics = diagnostics,
         C = C,
-        scaling = scaling,
+        center = center,
         kernel = kernel,
         K = if (kernel) {A} else {NULL}
       ),
@@ -437,7 +419,7 @@ predict.ridge <- function(object, x, ...) {
 
   } else {
 
-    newdata <- sweep(rbind(x), 2, object$scaling$A$mean, "-")
+    newdata <- sweep(rbind(x), 2, object$center$A, "-")
     newdata <- cbind(1, rbind(newdata))
     colnames(newdata)[1] <- "Intercept"
 
@@ -460,7 +442,7 @@ print.ridge <- function(object,...) {
      cat("\n Ridge Regression\n")
   }
 
-  cat("\n RMSE (LOOCV):", mean(object$rmse))
+  cat("\n Loss (LOOCV):", mean(object$rmse))
   cat("\n Lambda:", mean(object$C))
 
 }
